@@ -27,6 +27,9 @@ class Task:
     # Use a dataclass so the task shape is explicit and easy to serialize.
     title: str
     done: bool = False
+    # Track a simple priority flag so we can render visual hints (e.g., 🔴/🔵).
+    # Values: "normal" (default), "high", "low".
+    priority: str = "normal"
 
 
 def load_tasks() -> List[Task]:
@@ -54,8 +57,10 @@ def load_tasks() -> List[Task]:
             continue
         title = item.get("title")
         done = item.get("done", False)
+        # Default priority to "normal" so older JSON files stay compatible.
+        priority = item.get("priority", "normal")
         if isinstance(title, str) and isinstance(done, bool):
-            tasks.append(Task(title=title, done=done))
+            tasks.append(Task(title=title, done=done, priority=priority))
     return tasks
 
 
@@ -85,17 +90,25 @@ def cmd_list(tasks: List[Task]) -> None:
 
     for idx, task in enumerate(tasks, start=1):
         status = "✓" if task.done else " "
-        print(f"{idx}. [{status}] {task.title}")
+        # Use emojis to show priority at a glance.
+        if task.priority == "high":
+            priority_marker = "🔴 "
+        elif task.priority == "low":
+            priority_marker = "🔵 "
+        else:
+            priority_marker = ""
+        print(f"{idx}. [{status}] {priority_marker}{task.title}")
 
 
-def cmd_add(tasks: List[Task], title: str) -> None:
+def cmd_add(tasks: List[Task], title: str, priority: str = "normal") -> None:
     """
     Add a new task with the given title.
     """
     if not title.strip():
         print("Cannot add an empty task.")
         return
-    tasks.append(Task(title=title.strip(), done=False))
+    # Normalize whitespace and apply the requested priority.
+    tasks.append(Task(title=title.strip(), done=False, priority=priority))
     save_tasks(tasks)
     print(f'Added: "{title.strip()}"')
 
@@ -155,15 +168,38 @@ def cmd_delete(tasks: List[Task], num_str: str) -> None:
     print(f'Deleted: "{removed.title}"')
 
 
+def cmd_clear_completed(tasks: List[Task]) -> None:
+    """
+    Remove all completed tasks from the list.
+    """
+    if not tasks:
+        print("No tasks to clear.")
+        return
+
+    # Keep tasks that are not marked as done.
+    remaining = [t for t in tasks if not t.done]
+    cleared_count = len(tasks) - len(remaining)
+
+    if cleared_count == 0:
+        print("There are no completed tasks to clear.")
+        return
+
+    save_tasks(remaining)
+    # Reflect the new state in-memory so further operations in this process see it.
+    tasks[:] = remaining
+    print(f"Cleared {cleared_count} completed task(s).")
+
+
 def print_usage() -> None:
     """
     Show a concise usage guide so the CLI is self-documenting.
     """
     print("Usage:")
-    print('  todo.py add "task name"')
+    print('  todo.py add "task name" [--high|--low]')
     print("  todo.py list")
     print("  todo.py done <number>")
     print("  todo.py delete <number>")
+    print("  todo.py clear")
 
 
 def main(argv: List[str]) -> None:
@@ -183,8 +219,19 @@ def main(argv: List[str]) -> None:
         if len(argv) < 3:
             print('Missing task name. Example: todo.py add "Buy milk"')
             return
-        title = " ".join(argv[2:])
-        cmd_add(tasks, title)
+        # Support an optional trailing priority flag: --high or --low.
+        # Everything before the flag is treated as the task title.
+        *title_parts, last_part = argv[2:]
+        priority = "normal"
+        if last_part == "--high":
+            priority = "high"
+        elif last_part == "--low":
+            priority = "low"
+        else:
+            title_parts.append(last_part)
+
+        title = " ".join(title_parts)
+        cmd_add(tasks, title, priority)
     elif command == "done":
         if len(argv) < 3:
             print("Missing task number. Example: todo.py done 1")
@@ -195,6 +242,8 @@ def main(argv: List[str]) -> None:
             print("Missing task number. Example: todo.py delete 1")
             return
         cmd_delete(tasks, argv[2])
+    elif command == "clear":
+        cmd_clear_completed(tasks)
     else:
         print(f"Unknown command: {command}")
         print_usage()
