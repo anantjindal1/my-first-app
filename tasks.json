@@ -1,12 +1,32 @@
 [
   {
-    "title": "Urgent task",
+    "title": "Review PRs",
     "done": false,
-    "priority": "high"
+    "priority": "normal",
+    "category": "Work"
   },
   {
-    "title": "Someday task",
+    "title": "Prepare sprint board",
     "done": false,
-    "priority": "low"
+    "priority": "low",
+    "category": "Work"
+  },
+  {
+    "title": "Call parents",
+    "done": false,
+    "priority": "low",
+    "category": "Personal"
+  },
+  {
+    "title": "Read a book",
+    "done": false,
+    "priority": "normal",
+    "category": "Personal"
+  },
+  {
+    "title": "Random uncategorized task --low # category None",
+    "done": false,
+    "priority": "normal",
+    "category": "None"
   }
 ]
