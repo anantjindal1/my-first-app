@@ -1,0 +1,12 @@
+[
+  {
+    "title": "Urgent task",
+    "done": false,
+    "priority": "high"
+  },
+  {
+    "title": "Someday task",
+    "done": false,
+    "priority": "low"
+  }
+]
