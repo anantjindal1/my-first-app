@@ -1,7 +1,7 @@
 [
   {
     "title": "Review PRs",
-    "done": false,
+    "done": true,
     "priority": "normal",
     "category": "Work"
   },
@@ -27,6 +27,12 @@
     "title": "Random uncategorized task --low # category None",
     "done": false,
     "priority": "normal",
+    "category": "None"
+  },
+  {
+    "title": "Modern Python is cleaner",
+    "done": false,
+    "priority": "high",
     "category": "None"
   }
 ]

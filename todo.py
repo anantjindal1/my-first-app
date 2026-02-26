@@ -69,6 +69,12 @@ def load_tasks() -> List[Task]:
                 Task(title=title, done=done, priority=priority, category=category)
             )
     return tasks
+def green(text: str) -> str:
+    """
+    Wrap text in ANSI green if supported (for completed tasks).
+    """
+    return f"\033[92m{text}\033[0m"
+
 
 
 def save_tasks(tasks: List[Task]) -> None:
@@ -228,6 +234,36 @@ def cmd_clear_completed(tasks: List[Task]) -> None:
     print(f"Cleared {cleared_count} completed task(s).")
 
 
+def cmd_priorities(tasks: List[Task]) -> None:
+    """
+    Render tasks ordered by priority so that high-importance items are surfaced first.
+    """
+    if not tasks:
+        print("No tasks. You're all caught up!")
+        return
+
+    priority_order: dict[str, int] = {"high": 0, "normal": 1, "low": 2}
+    # Sort by our explicit priority order, then by completion status and title for stable output.
+    ordered = sorted(
+        tasks,
+        key=lambda t: (
+            priority_order.get(t.priority, 1),
+            t.done,
+            t.title.lower(),
+        ),
+    )
+
+    for idx, task in enumerate(ordered, start=1):
+        status = "✓" if task.done else " "
+        if task.priority == "high":
+            priority_marker = "🔴 "
+        elif task.priority == "low":
+            priority_marker = "🔵 "
+        else:
+            priority_marker = ""
+        print(f"{idx}. [{status}] {priority_marker}{task.title} :: {task.category}")
+
+
 def print_usage() -> None:
     """
     Show a concise usage guide so the CLI is self-documenting.
@@ -236,6 +272,7 @@ def print_usage() -> None:
     print('  todo.py add "task name" [--high|--low]')
     print('  todo.py add-category <category> "task name" [--high|--low]')
     print("  todo.py list")
+    print("  todo.py priorities")
     print("  todo.py done <number>")
     print("  todo.py done-category <category>")
     print("  todo.py delete <number>")
@@ -253,65 +290,68 @@ def main(argv: List[str]) -> None:
     command = argv[1]
     tasks = load_tasks()
 
-    if command == "list":
-        cmd_list(tasks)
-    elif command == "add":
-        if len(argv) < 3:
-            print('Missing task name. Example: todo.py add "Buy milk"')
-            return
-        # Support an optional trailing priority flag: --high or --low.
-        # Everything before the flag is treated as the task title.
-        *title_parts, last_part = argv[2:]
-        priority = "normal"
-        if last_part == "--high":
-            priority = "high"
-        elif last_part == "--low":
-            priority = "low"
-        else:
-            title_parts.append(last_part)
+    match command:
+        case "list":
+            cmd_list(tasks)
+        case "priorities":
+            cmd_priorities(tasks)
+        case "add":
+            if len(argv) < 3:
+                print('Missing task name. Example: todo.py add "Buy milk"')
+                return
+            # Support an optional trailing priority flag: --high or --low.
+            # Everything before the flag is treated as the task title.
+            *title_parts, last_part = argv[2:]
+            priority = "normal"
+            if last_part == "--high":
+                priority = "high"
+            elif last_part == "--low":
+                priority = "low"
+            else:
+                title_parts.append(last_part)
 
-        title = " ".join(title_parts)
-        cmd_add(tasks, title, priority)
-    elif command == "add-category":
-        if len(argv) < 4:
-            print(
-                'Missing category or task name. Example: todo.py add-category Work "Buy milk"'
-            )
-            return
-        category = argv[2]
-        # Support the same optional priority flag as the plain add command.
-        *title_parts, last_part = argv[3:]
-        priority = "normal"
-        if last_part == "--high":
-            priority = "high"
-        elif last_part == "--low":
-            priority = "low"
-        else:
-            title_parts.append(last_part)
+            title = " ".join(title_parts)
+            cmd_add(tasks, title, priority)
+        case "add-category":
+            if len(argv) < 4:
+                print(
+                    'Missing category or task name. Example: todo.py add-category Work "Buy milk"'
+                )
+                return
+            category = argv[2]
+            # Support the same optional priority flag as the plain add command.
+            *title_parts, last_part = argv[3:]
+            priority = "normal"
+            if last_part == "--high":
+                priority = "high"
+            elif last_part == "--low":
+                priority = "low"
+            else:
+                title_parts.append(last_part)
 
-        title = " ".join(title_parts)
-        cmd_add(tasks, title, priority, category)
-    elif command == "done":
-        if len(argv) < 3:
-            print("Missing task number. Example: todo.py done 1")
-            return
-        cmd_done(tasks, argv[2])
-    elif command == "done-category":
-        if len(argv) < 3:
-            print("Missing category. Example: todo.py done-category Work")
-            return
-        category = " ".join(argv[2:])
-        cmd_done_category(tasks, category)
-    elif command == "delete":
-        if len(argv) < 3:
-            print("Missing task number. Example: todo.py delete 1")
-            return
-        cmd_delete(tasks, argv[2])
-    elif command == "clear":
-        cmd_clear_completed(tasks)
-    else:
-        print(f"Unknown command: {command}")
-        print_usage()
+            title = " ".join(title_parts)
+            cmd_add(tasks, title, priority, category)
+        case "done":
+            if len(argv) < 3:
+                print("Missing task number. Example: todo.py done 1")
+                return
+            cmd_done(tasks, argv[2])
+        case "done-category":
+            if len(argv) < 3:
+                print("Missing category. Example: todo.py done-category Work")
+                return
+            category = " ".join(argv[2:])
+            cmd_done_category(tasks, category)
+        case "delete":
+            if len(argv) < 3:
+                print("Missing task number. Example: todo.py delete 1")
+                return
+            cmd_delete(tasks, argv[2])
+        case "clear":
+            cmd_clear_completed(tasks)
+        case _:
+            print(f"Unknown command: {command}")
+            print_usage()
 
 
 if __name__ == "__main__":
